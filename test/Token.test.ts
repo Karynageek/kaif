@@ -4,12 +4,15 @@ import { Token__factory } from "../typechain-types/factories/contracts/Token__fa
 import { Token } from "../typechain-types/contracts/Token";
 import { Vesting__factory } from "../typechain-types/factories/contracts/Vesting__factory";
 import { Vesting } from "../typechain-types/contracts/Vesting";
+import { MultiSigWallet__factory } from "../typechain-types/factories/contracts/MultiSigWallet__factory";
+import { MultiSigWallet } from "../typechain-types/contracts/MultiSigWallet";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { parseUnits } from "ethers/lib/utils";
 
 describe('Token contract', () => {
   let token: Token;
   let vesting: Vesting;
+  let multiSigWallet: MultiSigWallet;
   let owner: SignerWithAddress;
   let addr1: SignerWithAddress;
   let addr2: SignerWithAddress;
@@ -33,8 +36,12 @@ describe('Token contract', () => {
     token = await Token.deploy(name, symbol);
     await token.deployed();
 
+    const MultiSigWallet = (await ethers.getContractFactory('MultiSigWallet')) as MultiSigWallet__factory;
+    multiSigWallet = await MultiSigWallet.deploy([addr1.address, addr2.address, addr3.address]);
+    await multiSigWallet.deployed();
+
     const Vesting = (await ethers.getContractFactory('Vesting')) as Vesting__factory;
-    vesting = await Vesting.deploy(token.address);
+    vesting = await Vesting.deploy(token.address, multiSigWallet.address);
     await vesting.deployed();
   });
 

@@ -3,29 +3,33 @@ pragma solidity ^0.8.15;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "hardhat/console.sol";
 
 contract MultiSigWallet is ReentrancyGuard {
     uint8 public threshold;
     uint8 public ownersCount;
     uint256 public nonce;
 
-    mapping(uint256 => bool) public nonces;
     mapping(address => bool) public isOwners;
     mapping(address => bool) public signers;
 
     event RequirementChanged(uint256 threshold);
     event Executed(address to, uint256 amount);
-    event OwnerAdded(address owner);
-    event OwnerRemoved(address owner);
+    event OwnerUpdated(address owner);
 
     constructor(address[] memory owners_) {
         threshold = 3;
 
-        require(owners_.length == threshold, "MultiSig: not equal threshold");
+        require(
+            owners_.length == threshold,
+            "MultiSigWallet: !equal threshold"
+        );
 
         for (uint256 i = 0; i < threshold; i++) {
             isOwners[owners_[i]] = true;
         }
+
+        ownersCount = 3;
     }
 
     function execute(
@@ -34,19 +38,39 @@ contract MultiSigWallet is ReentrancyGuard {
         bytes calldata _data,
         bytes[] calldata _multiSignature
     ) external nonReentrant {
-        require(_to != address(0), "MultiSig: zero address");
-        require(nonces[nonce] == false, "MultiSig: execution completed");
+        require(_to != address(0), "MultiSigWallet: zero address");
 
-        _validateMultiSignature(_to, _amount, _data, nonce, _multiSignature);
+        _validateMultiSigWallet(_to, _amount, _data, nonce, _multiSignature);
         _transfer(_to, _amount, _data);
 
-        nonces[nonce] = true;
         nonce++;
 
         emit Executed(_to, _amount);
     }
 
-    function _validateMultiSignature(
+    function updateOwner(address owner, bool isAdded) external {
+        require(
+            msg.sender == address(this),
+            "MultiSigWallet: only via execute"
+        );
+        require(owner != address(0), "MultiSigWallet: zero address");
+
+        if (isAdded) {
+            require(!isOwners[owner], "MultiSigWallet: owner exists");
+            ownersCount += 1;
+        } else {
+            require(isOwners[owner], "MultiSigWallet: owner !exists");
+            ownersCount -= 1;
+        }
+
+        isOwners[owner] = isAdded;
+
+        _changeRequirement(ownersCount);
+
+        emit OwnerUpdated(owner);
+    }
+
+    function _validateMultiSigWallet(
         address _to,
         uint256 _amount,
         bytes calldata _data,
@@ -55,42 +79,36 @@ contract MultiSigWallet is ReentrancyGuard {
     ) private {
         uint256 count = _multiSignature.length;
 
-        require(count == threshold, "MultiSig: not enough signers");
+        require(count == threshold, "MultiSigWallet: !enough signers");
 
-        bytes32 msgHash = ECDSA.toEthSignedMessageHash(
-            _getMsgHash(_to, _amount, _data, _nonce)
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                address(this),
+                block.chainid,
+                _to,
+                _amount,
+                _data,
+                _nonce
+            )
         );
 
-        mapping(address => bool) storage initSigners = signers;
+        digest = ECDSA.toEthSignedMessageHash(digest);
+
+        address initSignerAddress;
 
         for (uint256 i = 0; i < count; i++) {
             bytes memory signature = _multiSignature[i];
-            address recovered = ECDSA.recover(msgHash, signature);
+            address recovered = ECDSA.recover(digest, signature);
 
-            require(!initSigners[recovered], "MultiSig: duplicate signature");
-            require(isOwners[recovered], "MultiSig: wrong signature");
-
-            initSigners[recovered] = true;
-        }
-    }
-
-    function _getMsgHash(
-        address _receiver,
-        uint256 _amount,
-        bytes calldata _data,
-        uint256 _nonce
-    ) private view returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    address(this),
-                    block.chainid,
-                    _receiver,
-                    _amount,
-                    _data,
-                    _nonce
-                )
+            require(
+                recovered > initSignerAddress,
+                "MultiSigWallet: double signature"
             );
+
+            require(isOwners[recovered], "MultiSigWallet: wrong signature");
+
+            initSignerAddress = recovered;
+        }
     }
 
     function _transfer(
@@ -98,39 +116,13 @@ contract MultiSigWallet is ReentrancyGuard {
         uint256 _amount,
         bytes calldata _data
     ) private {
-        (bool success, ) = payable(_to).call{value: _amount}(_data);
+        (bool success, ) = _to.call{value: _amount}(_data);
 
-        require(success, "Transfer not fulfilled");
-    }
-
-    function addOwner(address owner) external {
-        require(msg.sender == address(this));
-        require(owner != address(0), "MultiSig: owner is zero address");
-        require(!isOwners[owner], "MultiSig: owner is exist");
-
-        isOwners[owner] = true;
-        ownersCount += 1;
-
-        _changeRequirement(ownersCount);
-
-        emit OwnerAdded(owner);
-    }
-
-    function removeOwner(address owner) external {
-        require(msg.sender == address(this));
-        require(owner != address(0), "MultiSig: owner is zero address");
-        require(!isOwners[owner], "MultiSig: owner not exist");
-
-        isOwners[owner] = false;
-        ownersCount -= 1;
-
-        _changeRequirement(ownersCount);
-
-        emit OwnerRemoved(owner);
+        require(success, "MultiSigWallet: transfer !ended");
     }
 
     function _changeRequirement(uint8 _threshold) private {
-        require(_threshold >= 2, "MultiSig: at least 2 signers should be");
+        require(_threshold >= 2, "MultiSigWallet: threshold < 2");
 
         threshold = _threshold;
 

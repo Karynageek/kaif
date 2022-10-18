@@ -17,8 +17,10 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
     Token public immutable token;
 
     uint256 public startAt;
+    uint256 public teamTotalAmount;
+    uint256 public foundersTotalAmount;
 
-    uint8 public constant DIRECTION_COUNT = 5;
+    uint8 public constant DIRECTION_COUNT = 6;
     uint8 public constant MULTISIG_REQUIRED_COUNT = 3;
 
     uint256 public vestingSchedulesTotalAmount;
@@ -40,12 +42,11 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         uint256 released;
     }
 
-    uint256 public foundersTotalAmount;
-    mapping(address => uint256) foundersPercent;
-    address[] founders;
-
+    mapping(address => uint256) public foundersPercent;
     mapping(address => mapping(uint8 => VestingSchedule))
         public vestingSchedules;
+
+    address[] public founders;
 
     event Claimed(address account, uint256 amount);
     event VestingCreated(address account, uint256 amount, uint256 startAt);
@@ -81,7 +82,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         );
     }
 
-    function setPrivateRoundOneVestingSchedule(
+    function setPrivateRoundOneVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -95,7 +96,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         );
     }
 
-    function setPrivateRoundTwoVestingSchedule(
+    function setPrivateRoundTwoVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -109,7 +110,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         );
     }
 
-    function setMarketingVestingSchedule(
+    function setMarketingVestFor(
         address _account,
         uint256 _amount,
         uint256 _cliff,
@@ -127,7 +128,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         emit VestingCreated(_account, _amount, block.timestamp);
     }
 
-    function setBaseTeamVestingScheduleByAdmin(
+    function setMainTeamVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts,
         uint256[] calldata _percents
@@ -166,7 +167,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         emit BatchVestingCreated(_accounts, _amounts, startAt);
     }
 
-    function setTeamVestingScheduleByFounder(
+    function setAdditionalTeamVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts
     ) external onlyRole(MULTISIG_ROLE) {
@@ -174,13 +175,11 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
             _accounts.length == _amounts.length,
             "Vesting: accounts and amounts lengths not match"
         );
-
         require(
             founders.length == MULTISIG_REQUIRED_COUNT,
             "Vesting: count of founders shoud be 3"
         );
 
-        uint256 teamTotalAmount;
         uint8 direction = uint8(Direction.TEAM);
 
         for (uint256 i = 0; i < _accounts.length; i++) {
@@ -210,7 +209,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         emit BatchVestingCreated(_accounts, _amounts, startAt);
     }
 
-    function setFoundationVestingSchedule(
+    function setFoundationVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -229,10 +228,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(
-            getWithdrawableAmount() >= amount,
-            "Vesting: not enough withdrawable funds"
-        );
+        require(getWithdrawableAmount() >= amount, "Vesting: not enough funds");
 
         token.safeTransfer(msg.sender, amount);
     }
@@ -357,8 +353,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         }
 
         uint256 timeFromStart = blockTimestamp - _vestingSchedule.startAt;
-
-        if (timeFromStart % 30 days != 1) {
+        if ((timeFromStart / 86400) % 30 != 0) {
             return 0;
         }
 
