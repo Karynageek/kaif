@@ -79,6 +79,8 @@ describe('Vesting contract', () => {
     await vesting.deployed();
 
     const amount = parseUnits("800000000", await token.decimals());
+    // console.log(await token.isExecuted());
+    // expect(await token.isExecuted()).to.equal(false);
     await token.connect(owner).executeTGE(vesting.address, amount);
   });
 
@@ -127,14 +129,14 @@ describe('Vesting contract', () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("100", 18)];
 
-      await expect(vesting.connect(owner).setSeedRoundVestFor(accounts, amounts)).to.be.revertedWith("Vesting: accounts and amounts lengths not match");
+      await expect(vesting.connect(owner).setSeedRoundVestFor(accounts, amounts)).to.be.revertedWith("Vesting: data lengths !match");
     });
 
     it('rejects not sufficient tokens', async () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("900000000", 18), parseUnits("100", 18)];
 
-      await expect(vesting.connect(owner).setSeedRoundVestFor(accounts, amounts)).to.be.revertedWith("Vesting: not sufficient tokens");
+      await expect(vesting.connect(owner).setSeedRoundVestFor(accounts, amounts)).to.be.revertedWith("Vesting: !sufficient tokens");
     });
 
     it('rejects incorrect amount', async () => {
@@ -148,7 +150,7 @@ describe('Vesting contract', () => {
       const accounts = [zeroAddress, addr2.address];
       const amounts = [parseUnits("100", 18), parseUnits("100", 18)];
 
-      await expect(vesting.connect(owner).setSeedRoundVestFor(accounts, amounts)).to.be.revertedWith("Vesting: zero vester address");
+      await expect(vesting.connect(owner).setSeedRoundVestFor(accounts, amounts)).to.be.revertedWith("Vesting: zero address");
     });
   });
 
@@ -189,14 +191,14 @@ describe('Vesting contract', () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("100", 18)];
 
-      await expect(vesting.connect(owner).setPrivateRoundOneVestFor(accounts, amounts)).to.be.revertedWith("Vesting: accounts and amounts lengths not match");
+      await expect(vesting.connect(owner).setPrivateRoundOneVestFor(accounts, amounts)).to.be.revertedWith("Vesting: data lengths !match");
     });
 
     it('rejects not sufficient tokens', async () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("900000000", 18), parseUnits("100", 18)];
 
-      await expect(vesting.connect(owner).setPrivateRoundOneVestFor(accounts, amounts)).to.be.revertedWith("Vesting: not sufficient tokens");
+      await expect(vesting.connect(owner).setPrivateRoundOneVestFor(accounts, amounts)).to.be.revertedWith("Vesting: !sufficient tokens");
     });
 
     it('rejects incorrect amount', async () => {
@@ -210,7 +212,7 @@ describe('Vesting contract', () => {
       const accounts = [zeroAddress, addr2.address];
       const amounts = [parseUnits("100", 18), parseUnits("100", 18)];
 
-      await expect(vesting.connect(owner).setPrivateRoundOneVestFor(accounts, amounts)).to.be.revertedWith("Vesting: zero vester address");
+      await expect(vesting.connect(owner).setPrivateRoundOneVestFor(accounts, amounts)).to.be.revertedWith("Vesting: zero address");
     });
   });
 
@@ -251,14 +253,14 @@ describe('Vesting contract', () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("100", 18)];
 
-      await expect(vesting.connect(owner).setPrivateRoundTwoVestFor(accounts, amounts)).to.be.revertedWith("Vesting: accounts and amounts lengths not match");
+      await expect(vesting.connect(owner).setPrivateRoundTwoVestFor(accounts, amounts)).to.be.revertedWith("Vesting: data lengths !match");
     });
 
     it('rejects not sufficient tokens', async () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("900000000", 18), parseUnits("100", 18)];
 
-      await expect(vesting.connect(owner).setPrivateRoundTwoVestFor(accounts, amounts)).to.be.revertedWith("Vesting: not sufficient tokens");
+      await expect(vesting.connect(owner).setPrivateRoundTwoVestFor(accounts, amounts)).to.be.revertedWith("Vesting: !sufficient tokens");
     });
 
     it('rejects incorrect amount', async () => {
@@ -272,7 +274,7 @@ describe('Vesting contract', () => {
       const accounts = [zeroAddress, addr2.address];
       const amounts = [parseUnits("100", 18), parseUnits("100", 18)];
 
-      await expect(vesting.connect(owner).setPrivateRoundTwoVestFor(accounts, amounts)).to.be.revertedWith("Vesting: zero vester address");
+      await expect(vesting.connect(owner).setPrivateRoundTwoVestFor(accounts, amounts)).to.be.revertedWith("Vesting: zero address");
     });
   });
 
@@ -322,7 +324,7 @@ describe('Vesting contract', () => {
       const cliffInSeconds = 0;
       const durationsInSeconds = 62208000;
 
-      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffInSeconds, durationsInSeconds)).to.be.revertedWith("Vesting: not sufficient tokens");
+      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffInSeconds, durationsInSeconds)).to.be.revertedWith("Vesting: !sufficient tokens");
     });
 
     it('rejects incorrect amount', async () => {
@@ -340,7 +342,7 @@ describe('Vesting contract', () => {
       const cliffInSeconds = 0;
       const durationsInSeconds = 62208000;
 
-      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffInSeconds, durationsInSeconds)).to.be.revertedWith("Vesting: zero vester address");
+      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffInSeconds, durationsInSeconds)).to.be.revertedWith("Vesting: zero address");
     });
   });
 
@@ -385,7 +387,7 @@ describe('Vesting contract', () => {
       const amounts = [parseUnits("100", 18), parseUnits("400", 18)];
       const percents = [10, 40, 50];
 
-      await expect(vesting.connect(owner).setMainTeamVestFor(accounts, amounts, percents)).to.be.revertedWith("Vesting: data lengths not match");
+      await expect(vesting.connect(owner).setMainTeamVestFor(accounts, amounts, percents)).to.be.revertedWith("Vesting: data lengths !match");
     });
 
     it('rejects not sufficient tokens', async () => {
@@ -393,7 +395,7 @@ describe('Vesting contract', () => {
       const amounts = [parseUnits("900000000", 18), parseUnits("400", 18), parseUnits("500", 18)];
       const percents = [10, 40, 50];
 
-      await expect(vesting.connect(owner).setMainTeamVestFor(accounts, amounts, percents)).to.be.revertedWith("Vesting: not sufficient tokens");
+      await expect(vesting.connect(owner).setMainTeamVestFor(accounts, amounts, percents)).to.be.revertedWith("Vesting: !sufficient tokens");
     });
 
     it('rejects incorrect amount', async () => {
@@ -409,7 +411,7 @@ describe('Vesting contract', () => {
       const amounts = [parseUnits("100", 18), parseUnits("400", 18), parseUnits("500", 18)];
       const percents = [10, 40, 50];
 
-      await expect(vesting.connect(owner).setMainTeamVestFor(accounts, amounts, percents)).to.be.revertedWith("Vesting: zero vester address");
+      await expect(vesting.connect(owner).setMainTeamVestFor(accounts, amounts, percents)).to.be.revertedWith("Vesting: zero address");
     });
 
     it('rejects count of founders shoud be 3', async () => {
@@ -417,7 +419,7 @@ describe('Vesting contract', () => {
       const amounts = [parseUnits("100", 18), parseUnits("400", 18)];
       const percents = [10, 40];
 
-      await expect(vesting.connect(owner).setMainTeamVestFor(accounts, amounts, percents)).to.be.revertedWith("Vesting: count of founders shoud be 3");
+      await expect(vesting.connect(owner).setMainTeamVestFor(accounts, amounts, percents)).to.be.revertedWith("Vesting: founders shoud be 3");
     });
 
     it('rejects total percent not 100', async () => {
@@ -425,7 +427,7 @@ describe('Vesting contract', () => {
       const amounts = [parseUnits("100", 18), parseUnits("400", 18), parseUnits("500", 18)];
       const percents = [10, 40, 40];
 
-      await expect(vesting.connect(owner).setMainTeamVestFor(accounts, amounts, percents)).to.be.revertedWith("Vesting: total percent not 100");
+      await expect(vesting.connect(owner).setMainTeamVestFor(accounts, amounts, percents)).to.be.revertedWith("Vesting: total percent !100");
     });
   });
 
@@ -675,14 +677,14 @@ describe('Vesting contract', () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("100", 18)];
 
-      await expect(vesting.connect(owner).setFoundationVestFor(accounts, amounts)).to.be.revertedWith("Vesting: accounts and amounts lengths not match");
+      await expect(vesting.connect(owner).setFoundationVestFor(accounts, amounts)).to.be.revertedWith("Vesting: data lengths !match");
     });
 
     it('rejects not sufficient tokens', async () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("900000000", 18), parseUnits("100", 18)];
 
-      await expect(vesting.connect(owner).setFoundationVestFor(accounts, amounts)).to.be.revertedWith("Vesting: not sufficient tokens");
+      await expect(vesting.connect(owner).setFoundationVestFor(accounts, amounts)).to.be.revertedWith("Vesting: !sufficient tokens");
     });
 
     it('rejects incorrect amount', async () => {
@@ -696,7 +698,7 @@ describe('Vesting contract', () => {
       const accounts = [zeroAddress, addr2.address];
       const amounts = [parseUnits("100", 18), parseUnits("100", 18)];
 
-      await expect(vesting.connect(owner).setFoundationVestFor(accounts, amounts)).to.be.revertedWith("Vesting: zero vester address");
+      await expect(vesting.connect(owner).setFoundationVestFor(accounts, amounts)).to.be.revertedWith("Vesting: zero address");
     });
   });
 
@@ -720,7 +722,7 @@ describe('Vesting contract', () => {
 
       const amount = (await vesting.getWithdrawableAmount()).add(parseUnits("100", 18));
 
-      await expect(vesting.connect(owner).withdraw(amount)).to.be.revertedWith("Vesting: not enough funds");
+      await expect(vesting.connect(owner).withdraw(amount)).to.be.revertedWith("Vesting: !enough funds");
     });
   });
 
@@ -923,7 +925,7 @@ describe('Vesting contract', () => {
 
       await vesting.connect(owner).setMarketingVestFor(account, amount, cliff, duration);
 
-      await expect(vesting.connect(addr1).claim()).to.be.revertedWith("Vesting: claim amount must be > 0");
+      await expect(vesting.connect(addr1).claim()).to.be.revertedWith("Vesting: claim amount is 0");
     });
   });
 });

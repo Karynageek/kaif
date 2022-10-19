@@ -47,12 +47,12 @@ describe('Token contract', () => {
 
   describe('executes TGE', async () => {
     it('executes TGE successfully', async () => {
+      const amount = parseUnits("100", await token.decimals());
       const vestingBalanceBefore = await token.balanceOf(vesting.address);
       const totalSupplyBefore = await token.totalSupply();
 
       expect(await vesting.startAt()).to.equal(0);
-
-      const amount = parseUnits("100", await token.decimals());
+      expect(await token.isExecuted()).to.equal(false);
 
       const tx = await token.connect(owner).executeTGE(vesting.address, amount);
 
@@ -62,6 +62,7 @@ describe('Token contract', () => {
       const totalSupplyAfter = await token.totalSupply();
 
       expect(await vesting.startAt()).to.equal(txTimestamp);
+      expect(await token.isExecuted()).to.equal(true);
 
       expect(vestingBalanceAfter).to.equal(vestingBalanceBefore.add(amount));
       expect(totalSupplyAfter).to.equal(totalSupplyBefore.add(amount));
@@ -69,5 +70,13 @@ describe('Token contract', () => {
       await expect(tx).to.emit(token, "Transfer")
         .withArgs(zeroAddress, vesting.address, amount);
     })
-  })
+
+    it('rejects if TGE executed', async () => {
+      const amount = parseUnits("100", await token.decimals());
+
+      await token.connect(owner).executeTGE(vesting.address, amount);
+      await expect(token.connect(owner).executeTGE(vesting.address, amount)).to.rejectedWith("Token: TGE executed");
+    })
+  });
+
 });

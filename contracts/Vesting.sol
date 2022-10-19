@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.15;
+pragma solidity 0.8.17;
 
 import "./interface/ITokenVesting.sol";
 import "./Token.sol";
@@ -13,17 +13,21 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
 
     bytes32 public constant MULTISIG_ROLE = keccak256("MULTISIG_ROLE");
     bytes32 public constant STARTER_ROLE = keccak256("STARTER_ROLE");
+    uint8 public constant DIRECTION_COUNT = 6;
+    uint8 public constant MULTISIG_REQUIRED_COUNT = 3;
 
     Token public immutable token;
 
     uint256 public startAt;
     uint256 public teamTotalAmount;
     uint256 public foundersTotalAmount;
-
-    uint8 public constant DIRECTION_COUNT = 6;
-    uint8 public constant MULTISIG_REQUIRED_COUNT = 3;
-
     uint256 public vestingSchedulesTotalAmount;
+
+    mapping(address => uint256) public foundersPercent;
+    mapping(address => mapping(uint8 => VestingSchedule))
+        public vestingSchedules;
+
+    address[] public founders;
 
     enum Direction {
         SEED_ROUND,
@@ -41,12 +45,6 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         uint256 totalAmount;
         uint256 released;
     }
-
-    mapping(address => uint256) public foundersPercent;
-    mapping(address => mapping(uint8 => VestingSchedule))
-        public vestingSchedules;
-
-    address[] public founders;
 
     event Claimed(address account, uint256 amount);
     event VestingCreated(address account, uint256 amount, uint256 startAt);
@@ -136,12 +134,12 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         require(
             _accounts.length == _amounts.length &&
                 _amounts.length == _percents.length,
-            "Vesting: data lengths not match"
+            "Vesting: data lengths !match"
         );
 
         require(
             founders.length + _accounts.length == MULTISIG_REQUIRED_COUNT,
-            "Vesting: count of founders shoud be 3"
+            "Vesting: founders shoud be 3"
         );
 
         uint256 totalPercent;
@@ -162,7 +160,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
             foundersTotalAmount += _amounts[i];
         }
 
-        require(totalPercent == 100, "Vesting: total percent not 100");
+        require(totalPercent == 100, "Vesting: total percent !100");
 
         emit BatchVestingCreated(_accounts, _amounts, startAt);
     }
@@ -173,11 +171,11 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
     ) external onlyRole(MULTISIG_ROLE) {
         require(
             _accounts.length == _amounts.length,
-            "Vesting: accounts and amounts lengths not match"
+            "Vesting: data lengths !match"
         );
         require(
             founders.length == MULTISIG_REQUIRED_COUNT,
-            "Vesting: count of founders shoud be 3"
+            "Vesting: founders shoud be 3"
         );
 
         uint8 direction = uint8(Direction.TEAM);
@@ -187,7 +185,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
 
             require(
                 (teamTotalAmount * 100) / foundersTotalAmount <= 50,
-                "Vesting: max total amount for team can be 50%"
+                "Vesting: team max amount <= 50%"
             );
 
             _vestFor(
@@ -228,7 +226,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         nonReentrant
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(getWithdrawableAmount() >= amount, "Vesting: not enough funds");
+        require(getWithdrawableAmount() >= amount, "Vesting: !enough funds");
 
         token.safeTransfer(msg.sender, amount);
     }
@@ -248,7 +246,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
             totalVestedAmount += vestedAmount;
         }
 
-        require(totalVestedAmount > 0, "Vesting: claim amount must be > 0");
+        require(totalVestedAmount > 0, "Vesting: claim amount is 0");
 
         vestingSchedulesTotalAmount -= totalVestedAmount;
 
@@ -295,7 +293,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
     ) private {
         require(
             _accounts.length == _amounts.length,
-            "Vesting: accounts and amounts lengths not match"
+            "Vesting: data lengths !match"
         );
 
         for (uint256 i = 0; i < _accounts.length; i++) {
@@ -322,11 +320,11 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
     ) private {
         uint256 withdrawAmount = getWithdrawableAmount();
 
-        require(withdrawAmount >= _amount, "Vesting: not sufficient tokens");
+        require(withdrawAmount >= _amount, "Vesting: !sufficient tokens");
         require(_amount != 0, "Vesting: incorrect amount");
         require(_duration != 0, "Vesting: duration must be > 0");
-        require(_account != address(0), "Vesting: zero vester address");
-        require(_startAt != 0, "Vesting: not started");
+        require(_account != address(0), "Vesting: zero address");
+        require(_startAt != 0, "Vesting: !started");
 
         vestingSchedulesTotalAmount += _amount;
 
@@ -353,6 +351,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         }
 
         uint256 timeFromStart = blockTimestamp - _vestingSchedule.startAt;
+
         if ((timeFromStart / 86400) % 30 != 0) {
             return 0;
         }
