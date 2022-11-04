@@ -16,7 +16,7 @@ async function main() {
   [owner, addr1, addr2, addr3, ...addrs] = await ethers.getSigners();
 
   const MultiSigWallet = (await ethers.getContractFactory('MultiSigWallet')) as MultiSigWallet__factory;
-  multiSigWallet = await MultiSigWallet.deploy([addr1.address, addr2.address, addr3.address]);
+  multiSigWallet = await MultiSigWallet.deploy(["0xF2A74B4d7E908fc8a86c2dFee3712ebc8E0A7293", "0xcc980f32bE2411d98375Dde14ba84EF7300977Ef", "0x369fb8f9Bb66119742101E305d87f1e5d5766Db4"]);
   await multiSigWallet.deployed();
 
   console.log("MultiSigWallet deployed to:", multiSigWallet.address);
@@ -25,7 +25,7 @@ async function main() {
 
   await hre.run("verify:verify", {
     address: multiSigWallet.address,
-    constructorArguments: [[addr1.address, addr2.address, addr3.address]],
+    constructorArguments: [["0xF2A74B4d7E908fc8a86c2dFee3712ebc8E0A7293", "0xcc980f32bE2411d98375Dde14ba84EF7300977Ef", "0x369fb8f9Bb66119742101E305d87f1e5d5766Db4"]],
   });
 }
 

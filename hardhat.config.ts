@@ -20,6 +20,12 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
+    mainnet: {
+      url: process.env.BSC_URL || "",
+      accounts: {
+        mnemonic: process.env.MNEMONIC,
+      },
+    },
     bscTestnet: {
       url: process.env.BSC_URL || "",
       accounts: {

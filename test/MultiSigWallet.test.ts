@@ -50,6 +50,7 @@ describe('MultiSigWallet contract', () => {
   let addrs: SignerWithAddress[];
   const name = "Orange Token";
   const symbol = "OT";
+  const totalSupply = parseUnits("800000000", 18);
   const zeroAddress = '0x0000000000000000000000000000000000000000';
   const chainId = 31337;
 
@@ -57,7 +58,7 @@ describe('MultiSigWallet contract', () => {
     [owner, addr1, addr2, addr3, addr4, ...addrs] = await ethers.getSigners();
 
     const Token = (await ethers.getContractFactory('Token')) as Token__factory;
-    token = await Token.deploy(name, symbol);
+    token = await Token.deploy(name, symbol, totalSupply);
     await token.deployed();
   });
 
@@ -74,10 +75,10 @@ describe('MultiSigWallet contract', () => {
       }
     });
 
-    it('rejects if !equal threshold', async () => {
+    it('rejects if threshold < 2', async () => {
       const MultiSigWallet = (await ethers.getContractFactory('MultiSigWallet')) as MultiSigWallet__factory;
 
-      await expect(MultiSigWallet.deploy([addr1.address, addr2.address])).to.be.revertedWith("MultiSigWallet: !equal threshold");
+      await expect(MultiSigWallet.deploy([addr1.address])).to.be.revertedWith("MultiSigWallet: threshold < 2");
     });
   });
 
@@ -107,22 +108,17 @@ describe('MultiSigWallet contract', () => {
 
       let iface = new ethers.utils.Interface(ABI);
       const data = iface.encodeFunctionData("updateOwner", [oldOwner, false])
-
+      const signers = [addr1, addr2, addr3];
       let digest = getDigest(multiSigWallet.address, chainId, multiSigWallet.address, data, nonce);
-      let signatures = await getMultiSignatures(digest, [addr1, addr2, addr3]);
+      let signatures = await getMultiSignatures(digest, signers);
 
-      const ownersCountBefore = await multiSigWallet.ownersCount();
-
-      expect(await multiSigWallet.threshold()).to.equal(ownersCountBefore);
+      expect(await multiSigWallet.threshold()).to.equal(signers.length);
       expect(await multiSigWallet.isOwners(oldOwner)).to.equal(true);
 
       let tx = await multiSigWallet.connect(owner).execute(multiSigWallet.address, 0, data, signatures);
 
-      const ownersCountAfter = await multiSigWallet.ownersCount();
-
-      expect(ownersCountAfter).to.equal(ownersCountBefore - 1);
       expect(await multiSigWallet.isOwners(oldOwner)).to.equal(false);
-      expect(await multiSigWallet.threshold()).to.equal(ownersCountAfter);
+      expect(await multiSigWallet.threshold()).to.equal(signers.length - 1);
 
       await expect(tx).to.emit(multiSigWallet, "OwnerUpdated")
         .withArgs(oldOwner);
@@ -255,21 +251,17 @@ describe('MultiSigWallet contract', () => {
 
       let iface = new ethers.utils.Interface(ABI);
       const data = iface.encodeFunctionData("updateOwner", [oldOwner, false])
-
+      const signers = [addr1, addr2, addr3];
       let digest = getDigest(multiSigWallet.address, chainId, multiSigWallet.address, data, nonce);
-      let signatures = await getMultiSignatures(digest, [addr1, addr2, addr3]);
+      let signatures = await getMultiSignatures(digest, signers);
 
-      const ownersCountBefore = await multiSigWallet.ownersCount();
-      expect(await multiSigWallet.threshold()).to.equal(ownersCountBefore);
+      expect(await multiSigWallet.threshold()).to.equal(signers.length);
       expect(await multiSigWallet.isOwners(oldOwner)).to.equal(true);
 
       let tx = await multiSigWallet.connect(owner).execute(multiSigWallet.address, 0, data, signatures);
 
-      const ownersCountAfter = await multiSigWallet.ownersCount();
-
-      expect(ownersCountAfter).to.equal(ownersCountBefore - 1);
       expect(await multiSigWallet.isOwners(oldOwner)).to.equal(false);
-      expect(await multiSigWallet.threshold()).to.equal(ownersCountAfter);
+      expect(await multiSigWallet.threshold()).to.equal(signers.length - 1);
 
       await expect(tx).to.emit(multiSigWallet, "OwnerUpdated")
         .withArgs(oldOwner);
@@ -285,22 +277,17 @@ describe('MultiSigWallet contract', () => {
 
       let iface = new ethers.utils.Interface(ABI);
       const data = iface.encodeFunctionData("updateOwner", [newOwner, true])
-
+      const signers = [addr1, addr2, addr3];
       let digest = getDigest(multiSigWallet.address, chainId, multiSigWallet.address, data, nonce);
-      let signatures = await getMultiSignatures(digest, [addr1, addr2, addr3]);
+      let signatures = await getMultiSignatures(digest, signers);
 
-      const ownersCountBefore = await multiSigWallet.ownersCount();
-
-      expect(await multiSigWallet.threshold()).to.equal(ownersCountBefore);
+      expect(await multiSigWallet.threshold()).to.equal(signers.length);
       expect(await multiSigWallet.isOwners(newOwner)).to.equal(false);
 
       let tx = await multiSigWallet.connect(owner).execute(multiSigWallet.address, 0, data, signatures);
 
-      const ownersCountAfter = await multiSigWallet.ownersCount();
-
-      expect(ownersCountAfter).to.equal(ownersCountBefore + 1);
       expect(await multiSigWallet.isOwners(newOwner)).to.equal(true);
-      expect(await multiSigWallet.threshold()).to.equal(ownersCountAfter);
+      expect(await multiSigWallet.threshold()).to.equal(signers.length + 1);
 
       await expect(tx).to.emit(multiSigWallet, "OwnerUpdated")
         .withArgs(newOwner);

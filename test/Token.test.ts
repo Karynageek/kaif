@@ -21,6 +21,7 @@ describe('Token contract', () => {
   let addrs: SignerWithAddress[];
   const name = "Orange Token";
   const symbol = "OT";
+  const totalSupply = parseUnits("800000000", 18);
   const zeroAddress = '0x0000000000000000000000000000000000000000';
 
   async function getBlockTimestamp(tx: any): Promise<number> {
@@ -33,7 +34,7 @@ describe('Token contract', () => {
     [owner, addr1, addr2, addr3, fundingWallet, ...addrs] = await ethers.getSigners();
 
     const Token = (await ethers.getContractFactory('Token')) as Token__factory;
-    token = await Token.deploy(name, symbol);
+    token = await Token.deploy(name, symbol, totalSupply);
     await token.deployed();
 
     const MultiSigWallet = (await ethers.getContractFactory('MultiSigWallet')) as MultiSigWallet__factory;
@@ -48,8 +49,8 @@ describe('Token contract', () => {
   describe('executes TGE', async () => {
     it('executes TGE successfully', async () => {
       const amount = parseUnits("100", await token.decimals());
+      const ownerBalanceBefore = await token.balanceOf(owner.address);
       const vestingBalanceBefore = await token.balanceOf(vesting.address);
-      const totalSupplyBefore = await token.totalSupply();
 
       expect(await vesting.startAt()).to.equal(0);
       expect(await token.isExecuted()).to.equal(false);
@@ -57,18 +58,17 @@ describe('Token contract', () => {
       const tx = await token.connect(owner).executeTGE(vesting.address, amount);
 
       const txTimestamp = await getBlockTimestamp(tx);
-
+      const ownerBalanceAfter = await token.balanceOf(owner.address);
       const vestingBalanceAfter = await token.balanceOf(vesting.address);
-      const totalSupplyAfter = await token.totalSupply();
 
       expect(await vesting.startAt()).to.equal(txTimestamp);
       expect(await token.isExecuted()).to.equal(true);
 
+      expect(ownerBalanceAfter).to.equal(ownerBalanceBefore.sub(amount));
       expect(vestingBalanceAfter).to.equal(vestingBalanceBefore.add(amount));
-      expect(totalSupplyAfter).to.equal(totalSupplyBefore.add(amount));
 
       await expect(tx).to.emit(token, "Transfer")
-        .withArgs(zeroAddress, vesting.address, amount);
+        .withArgs(owner.address, vesting.address, amount);
     })
 
     it('rejects if TGE executed', async () => {

@@ -12,8 +12,8 @@ async function main() {
   let addr2: SignerWithAddress;
   let addr3: SignerWithAddress;
   let addrs: SignerWithAddress[];
-  const tokenAddress = "0x...";
-  const multiSigWalletAddress = "0x...";
+  const tokenAddress = "0x0e4967270e79b2291c807996F68a36d246277aE6";
+  const multiSigWalletAddress = "0xB867A326917F392579E3a30605fD3e16c5b90D58";
 
   [owner, addr1, addr2, addr3, ...addrs] = await ethers.getSigners();
 

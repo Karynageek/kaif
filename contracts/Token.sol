@@ -9,16 +9,20 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract Token is ERC20, ERC20Burnable, Ownable {
     bool public isExecuted;
 
-    constructor(string memory _name, string memory _symbol)
-        ERC20(_name, _symbol)
-    {}
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        uint256 totalSupply_
+    ) ERC20(name_, symbol_) {
+        _mint(msg.sender, totalSupply_);
+    }
 
-    function executeTGE(address vesting, uint256 amount) external onlyOwner {
+    function executeTGE(address _vesting, uint256 _amount) external onlyOwner {
         require(!isExecuted, "Token: TGE executed");
 
-        _mint(vesting, amount);
+        transfer(_vesting, _amount);
 
-        ITokenVesting(vesting).setStartAt();
+        ITokenVesting(_vesting).setStartAt();
 
         isExecuted = true;
     }
