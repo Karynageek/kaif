@@ -17,12 +17,20 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
     bytes32 public constant STARTER_ROLE = keccak256("STARTER_ROLE");
     uint8 public constant DIRECTION_COUNT = 7;
     uint8 public constant MAIN_TEAM_REQUIRED_COUNT = 3;
+    uint256 public constant MAX_ROUNDS_AMOUNT = 240000000 * 10**18;
+    uint256 public constant MAX_MARKETING_AMOUNT = 160000000 * 10**18;
+    uint256 public constant MAX_TEAM_AMOUNT = 120000000 * 10**18;
+    uint256 public constant MAX_FOUNDATION_AMOUNT = 80000000 * 10**18;
 
     Token public immutable token;
 
     uint128 public startAt;
+
+    uint256 public roundsTotalAmount;
+    uint256 public marketingTotalAmount;
     uint256 public additionalTeamTotalAmount;
     uint256 public mainTeamTotalAmount;
+    uint256 public fondationTotalAmount;
 
     uint256 public vestingSchedulesTotalAmount;
 
@@ -76,7 +84,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         address[] calldata _accounts,
         uint256[] calldata _amounts
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _batchVestFor(
+        uint256 totalAmount = _batchVestFor(
             _accounts,
             _amounts,
             startAt,
@@ -85,13 +93,18 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
             10,
             uint8(Direction.PUBLIC_ROUND)
         );
+
+        require(
+            roundsTotalAmount + totalAmount <= MAX_ROUNDS_AMOUNT,
+            "Vesting: total amount exceeded"
+        );
     }
 
     function setSeedRoundVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _batchVestFor(
+        uint256 totalAmount = _batchVestFor(
             _accounts,
             _amounts,
             startAt,
@@ -100,13 +113,18 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
             0,
             uint8(Direction.SEED_ROUND)
         );
+
+        require(
+            roundsTotalAmount + totalAmount <= MAX_ROUNDS_AMOUNT,
+            "Vesting: total amount exceeded"
+        );
     }
 
     function setPrivateRoundOneVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _batchVestFor(
+        uint256 totalAmount = _batchVestFor(
             _accounts,
             _amounts,
             startAt,
@@ -115,13 +133,18 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
             10,
             uint8(Direction.PRIVATE_ROUND_ONE)
         );
+
+        require(
+            roundsTotalAmount + totalAmount <= MAX_ROUNDS_AMOUNT,
+            "Vesting: total amount exceeded"
+        );
     }
 
     function setPrivateRoundTwoVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _batchVestFor(
+        uint256 totalAmount = _batchVestFor(
             _accounts,
             _amounts,
             startAt,
@@ -129,6 +152,11 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
             720 days,
             10,
             uint8(Direction.PRIVATE_ROUND_TWO)
+        );
+
+        require(
+            roundsTotalAmount + totalAmount <= MAX_ROUNDS_AMOUNT,
+            "Vesting: total amount exceeded"
         );
     }
 
@@ -146,6 +174,11 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
             _duration,
             2,
             uint8(Direction.MARKETING)
+        );
+
+        require(
+            marketingTotalAmount + _amount <= MAX_MARKETING_AMOUNT,
+            "Vesting: total amount exceeded"
         );
 
         emit VestingCreated(_account, _amount, uint128(block.timestamp));
@@ -170,8 +203,11 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         );
 
         uint8 totalPercent;
+        uint256 totalAmount;
 
         for (uint8 i = 0; i < accountsCount; i++) {
+            totalAmount += _amounts[i];
+
             _vestFor(
                 _accounts[i],
                 _amounts[i],
@@ -189,6 +225,10 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         }
 
         require(totalPercent == 100, "Vesting: total percent !100");
+        require(
+            mainTeamTotalAmount + totalAmount <= MAX_TEAM_AMOUNT,
+            "Vesting: total amount exceeded"
+        );
 
         emit BatchVestingCreated(_accounts, _amounts, startAt);
     }
@@ -211,7 +251,10 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
 
         uint8 direction = uint8(Direction.TEAM);
 
+        uint256 totalAmount;
+
         for (uint8 i = 0; i < accountsCount; i++) {
+            totalAmount += _amounts[i];
             additionalTeamTotalAmount += _amounts[i];
 
             require(
@@ -236,6 +279,12 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
                 100;
         }
 
+        require(
+            additionalTeamTotalAmount + mainTeamTotalAmount + totalAmount <=
+                MAX_TEAM_AMOUNT,
+            "Vesting: total amount exceeded"
+        );
+
         emit BatchVestingCreated(_accounts, _amounts, startAt);
     }
 
@@ -243,7 +292,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         address[] calldata _accounts,
         uint256[] calldata _amounts
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _batchVestFor(
+        uint256 totalAmount = _batchVestFor(
             _accounts,
             _amounts,
             startAt,
@@ -251,6 +300,11 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
             570 days,
             5,
             uint8(Direction.FOUNDATION)
+        );
+
+        require(
+            fondationTotalAmount + totalAmount <= MAX_FOUNDATION_AMOUNT,
+            "Vesting: total amount exceeded"
         );
     }
 
@@ -273,9 +327,6 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
             );
 
             if (vestedAmount > 0) {
-                // if (vestingSchedules[msg.sender][i].earlyUnlockAmount > 0) {
-                //     vestingSchedules[msg.sender][i].earlyUnlockAmount = 0;
-                // }
                 vestingSchedules[msg.sender][i].released += vestedAmount;
             }
 
@@ -315,7 +366,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         uint128 _duration,
         uint8 _unlockPercent,
         uint8 _direction
-    ) private {
+    ) private returns (uint256 totalAmount) {
         uint8 accountsCount = uint8(_accounts.length);
 
         require(
@@ -324,6 +375,8 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         );
 
         for (uint8 i = 0; i < accountsCount; i++) {
+            totalAmount += _amounts[i];
+
             _vestFor(
                 _accounts[i],
                 _amounts[i],
