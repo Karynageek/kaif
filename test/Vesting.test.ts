@@ -96,7 +96,7 @@ describe('Vesting contract', () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("100", 18), parseUnits("200", 18)];
       const startAt = await vesting.startAt();
-      const cliffInSeconds = 0;
+      const cliffAt = 0;
       const durationsInSeconds = 15552000;
       const earlyUnlockPercent = 10;
       const direction = 0;
@@ -114,7 +114,7 @@ describe('Vesting contract', () => {
       for (let i = 0; i < accounts.length; i++) {
         const vestedScheduleAfter = await vesting.vestingSchedules(accounts[i], direction);
 
-        expect(vestedScheduleAfter.cliffInSeconds).to.equal(startAt.add(cliffInSeconds));
+        expect(vestedScheduleAfter.cliffAt).to.equal(startAt.add(cliffAt));
         expect(vestedScheduleAfter.startAt).to.equal(startAt);
         expect(vestedScheduleAfter.durationInSeconds).to.equal(durationsInSeconds);
         expect(vestedScheduleAfter.totalAmount).to.equal(amounts[i]);
@@ -171,7 +171,7 @@ describe('Vesting contract', () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("100", 18), parseUnits("200", 18)];
       const startAt = await vesting.startAt();
-      const cliffInSeconds = 31104000;
+      const cliffAt = 31104000;
       const durationsInSeconds = 82944000;
       const earlyUnlockPercent = 0;
       const direction = 1;
@@ -189,7 +189,7 @@ describe('Vesting contract', () => {
       for (let i = 0; i < accounts.length; i++) {
         const vestedScheduleAfter = await vesting.vestingSchedules(accounts[i], direction);
 
-        expect(vestedScheduleAfter.cliffInSeconds).to.equal(startAt.add(cliffInSeconds));
+        expect(vestedScheduleAfter.cliffAt).to.equal(startAt.add(cliffAt));
         expect(vestedScheduleAfter.startAt).to.equal(startAt);
         expect(vestedScheduleAfter.durationInSeconds).to.equal(durationsInSeconds);
         expect(vestedScheduleAfter.totalAmount).to.equal(amounts[i]);
@@ -246,7 +246,7 @@ describe('Vesting contract', () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("100", 18), parseUnits("200", 18)];
       const startAt = await vesting.startAt();
-      const cliffInSeconds = 15552000;
+      const cliffAt = 15552000;
       const durationsInSeconds = 62208000;
       const earlyUnlockPercent = 10;
       const direction = 2;
@@ -261,7 +261,7 @@ describe('Vesting contract', () => {
       for (let i = 0; i < accounts.length; i++) {
         const vestedScheduleAfter = await vesting.vestingSchedules(accounts[i], direction);
 
-        expect(vestedScheduleAfter.cliffInSeconds).to.equal(startAt.add(cliffInSeconds));
+        expect(vestedScheduleAfter.cliffAt).to.equal(startAt.add(cliffAt));
         expect(vestedScheduleAfter.startAt).to.equal(startAt);
         expect(vestedScheduleAfter.durationInSeconds).to.equal(durationsInSeconds);
         expect(vestedScheduleAfter.totalAmount).to.equal(amounts[i]);
@@ -318,7 +318,7 @@ describe('Vesting contract', () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("100", 18), parseUnits("200", 18)];
       const startAt = await vesting.startAt();
-      const cliffInSeconds = 15552000;
+      const cliffAt = 15552000;
       const durationsInSeconds = 62208000;
       const earlyUnlockPercent = 10;
       const direction = 3;
@@ -333,7 +333,7 @@ describe('Vesting contract', () => {
       for (let i = 0; i < accounts.length; i++) {
         const vestedScheduleAfter = await vesting.vestingSchedules(accounts[i], direction);
 
-        expect(vestedScheduleAfter.cliffInSeconds).to.equal(startAt.add(cliffInSeconds));
+        expect(vestedScheduleAfter.cliffAt).to.equal(startAt.add(cliffAt));
         expect(vestedScheduleAfter.startAt).to.equal(startAt);
         expect(vestedScheduleAfter.durationInSeconds).to.equal(durationsInSeconds);
         expect(vestedScheduleAfter.totalAmount).to.equal(amounts[i]);
@@ -389,7 +389,7 @@ describe('Vesting contract', () => {
     it('sets marketing vest for successfully', async () => {
       const account = addr1.address;
       const amount = parseUnits("100", 18);
-      const cliffInSeconds = 0;
+      const cliffAt = 0;
       const durationsInSeconds = 62208000;
       const earlyUnlockPercent = 2;
       const direction = 4;
@@ -399,12 +399,12 @@ describe('Vesting contract', () => {
       expect(await vesting.vestingSchedulesTotalAmount()).to.equal(totalAmountBefore);
       expect(await vesting.getWithdrawableAmount()).to.equal((await token.balanceOf(vesting.address)).sub(totalAmountBefore));
 
-      const tx = await vesting.connect(owner).setMarketingVestFor(account, amount, cliffInSeconds, durationsInSeconds);
+      const tx = await vesting.connect(owner).setMarketingVestFor(account, amount, cliffAt, durationsInSeconds);
       const startAt = await getBlockTimestamp(tx);
 
       const vestedScheduleAfter = await vesting.vestingSchedules(account, direction);
 
-      expect(vestedScheduleAfter.cliffInSeconds).to.equal(startAt + cliffInSeconds);
+      expect(vestedScheduleAfter.cliffAt).to.equal(startAt + cliffAt);
       expect(vestedScheduleAfter.startAt).to.equal(startAt);
       expect(vestedScheduleAfter.durationInSeconds).to.equal(durationsInSeconds);
       expect(vestedScheduleAfter.totalAmount).to.equal(amount);
@@ -422,46 +422,46 @@ describe('Vesting contract', () => {
     it('rejects if total amount exceeded', async () => {
       const account = addr1.address;
       const amount = (await vesting.MAX_MARKETING_AMOUNT()).add(1);
-      const cliffInSeconds = 0;
+      const cliffAt = 0;
       const durationsInSeconds = 62208000;
 
-      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffInSeconds, durationsInSeconds)).to.be.revertedWith("Vesting: total amount exceeded");
+      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffAt, durationsInSeconds)).to.be.revertedWith("Vesting: total amount exceeded");
     });
 
     it('rejects if duration must be > 0', async () => {
       const account = addr1.address;
       const amount = parseUnits("100", 18);
-      const cliffInSeconds = 0;
+      const cliffAt = 0;
       const durationsInSeconds = 0;
 
-      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffInSeconds, durationsInSeconds)).to.be.revertedWith("Vesting: duration must be > 0");
+      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffAt, durationsInSeconds)).to.be.revertedWith("Vesting: duration must be > 0");
     });
 
     it('rejects if not sufficient tokens', async () => {
       const account = addr1.address;
       const amount = parseUnits("900000000", 18);
-      const cliffInSeconds = 0;
+      const cliffAt = 0;
       const durationsInSeconds = 62208000;
 
-      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffInSeconds, durationsInSeconds)).to.be.revertedWith("Vesting: !sufficient tokens");
+      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffAt, durationsInSeconds)).to.be.revertedWith("Vesting: !sufficient tokens");
     });
 
     it('rejects if incorrect amount', async () => {
       const account = addr1.address;
       const amount = parseUnits("0", 18);
-      const cliffInSeconds = 0;
+      const cliffAt = 0;
       const durationsInSeconds = 62208000;
 
-      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffInSeconds, durationsInSeconds)).to.be.revertedWith("Vesting: incorrect amount");
+      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffAt, durationsInSeconds)).to.be.revertedWith("Vesting: incorrect amount");
     });
 
     it('rejects if zero vester address', async () => {
       const account = zeroAddress;
       const amount = parseUnits("100", 18);
-      const cliffInSeconds = 0;
+      const cliffAt = 0;
       const durationsInSeconds = 62208000;
 
-      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffInSeconds, durationsInSeconds)).to.be.revertedWith("Vesting: zero address");
+      await expect(vesting.connect(owner).setMarketingVestFor(account, amount, cliffAt, durationsInSeconds)).to.be.revertedWith("Vesting: zero address");
     });
   });
 
@@ -471,7 +471,7 @@ describe('Vesting contract', () => {
       const amounts = [parseUnits("100", 18), parseUnits("400", 18), parseUnits("500", 18)];
       const percents = [10, 40, 50];
       const startAt = await vesting.startAt();
-      const cliffInSeconds = 10368000;
+      const cliffAt = 10368000;
       const durationsInSeconds = 62208000;
       const earlyUnlockPercent = 0;
       const direction = 5;
@@ -487,7 +487,7 @@ describe('Vesting contract', () => {
       for (let i = 0; i < accounts.length; i++) {
         const vestedScheduleAfter = await vesting.vestingSchedules(accounts[i], direction);
 
-        expect(vestedScheduleAfter.cliffInSeconds).to.equal(startAt.add(cliffInSeconds));
+        expect(vestedScheduleAfter.cliffAt).to.equal(startAt.add(cliffAt));
         expect(vestedScheduleAfter.startAt).to.equal(startAt);
         expect(vestedScheduleAfter.durationInSeconds).to.equal(durationsInSeconds);
         expect(vestedScheduleAfter.totalAmount).to.equal(amounts[i]);
@@ -584,7 +584,7 @@ describe('Vesting contract', () => {
       let signatures = await getMultiSignatures(digest, [addr1, addr2, addr3]);
 
       const startAt = await vesting.startAt();
-      const cliffInSeconds = 10368000;
+      const cliffAt = 10368000;
       const durationsInSeconds = 62208000;
       const earlyUnlockPercent = 0;
       const direction = 5;
@@ -608,7 +608,7 @@ describe('Vesting contract', () => {
       for (let i = 0; i < accounts.length; i++) {
         const vestedScheduleAfter = await vesting.vestingSchedules(accounts[i], direction);
 
-        expect(vestedScheduleAfter.cliffInSeconds).to.equal(startAt.add(cliffInSeconds));
+        expect(vestedScheduleAfter.cliffAt).to.equal(startAt.add(cliffAt));
         expect(vestedScheduleAfter.startAt).to.equal(startAt);
         expect(vestedScheduleAfter.durationInSeconds).to.equal(durationsInSeconds);
         expect(vestedScheduleAfter.totalAmount).to.equal(amounts[i]);
@@ -700,7 +700,7 @@ describe('Vesting contract', () => {
       await expect(multiSigWallet.connect(owner).execute(vesting.address, 0, data, signatures)).to.be.reverted;
     });
 
-    it('rejects if max total amount for team > 50%', async () => {
+    it('rejects if max total amount for additional team > 50%', async () => {
       const mainAccounts = [addr1.address, addr2.address, addr3.address];
       const mainAmounts = [parseUnits("100", 18), parseUnits("400", 18), parseUnits("500", 18)];
       const percents = [10, 40, 50];
@@ -802,7 +802,7 @@ describe('Vesting contract', () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("100", 18), parseUnits("200", 18)];
       const startAt = await vesting.startAt();
-      const cliffInSeconds = 0;
+      const cliffAt = 0;
       const durationsInSeconds = 49248000;
       const earlyUnlockPercent = 5;
       const direction = 6;
@@ -817,7 +817,7 @@ describe('Vesting contract', () => {
       for (let i = 0; i < accounts.length; i++) {
         const vestedScheduleAfter = await vesting.vestingSchedules(accounts[i], direction);
 
-        expect(vestedScheduleAfter.cliffInSeconds).to.equal(startAt.add(cliffInSeconds));
+        expect(vestedScheduleAfter.cliffAt).to.equal(startAt.add(cliffAt));
         expect(vestedScheduleAfter.startAt).to.equal(startAt);
         expect(vestedScheduleAfter.durationInSeconds).to.equal(durationsInSeconds);
         expect(vestedScheduleAfter.totalAmount).to.equal(amounts[i]);
@@ -927,7 +927,7 @@ describe('Vesting contract', () => {
       const accounts = [addr1.address, addr2.address];
       const amounts = [parseUnits("100", 18), parseUnits("200", 18)];
       const startAt = await vesting.startAt();
-      const cliffInSeconds = 31104000;
+      const cliffAt = 31104000;
       const durationsInSeconds = 82944000;
       const earlyUnlockPercent = 0;
       const direction = 1;
@@ -937,7 +937,7 @@ describe('Vesting contract', () => {
       for (let i = 0; i < accounts.length; i++) {
         const vestedScheduleAfter = await vesting.vestingSchedules(accounts[i], direction);
 
-        expect(vestedScheduleAfter.cliffInSeconds).to.equal(startAt.add(cliffInSeconds));
+        expect(vestedScheduleAfter.cliffAt).to.equal(startAt.add(cliffAt));
         expect(vestedScheduleAfter.startAt).to.equal(startAt);
         expect(vestedScheduleAfter.durationInSeconds).to.equal(durationsInSeconds);
         expect(vestedScheduleAfter.totalAmount).to.equal(amounts[i]);

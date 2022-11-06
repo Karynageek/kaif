@@ -15,8 +15,10 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
 
     bytes32 public constant MULTISIG_ROLE = keccak256("MULTISIG_ROLE");
     bytes32 public constant STARTER_ROLE = keccak256("STARTER_ROLE");
+
     uint8 public constant DIRECTION_COUNT = 7;
     uint8 public constant MAIN_TEAM_REQUIRED_COUNT = 3;
+
     uint256 public constant MAX_ROUNDS_AMOUNT = 240000000 * 10**18;
     uint256 public constant MAX_MARKETING_AMOUNT = 160000000 * 10**18;
     uint256 public constant MAX_TEAM_AMOUNT = 120000000 * 10**18;
@@ -51,7 +53,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
     }
 
     struct VestingSchedule {
-        uint128 cliffInSeconds;
+        uint128 cliffAt;
         uint128 startAt;
         uint128 durationInSeconds;
         uint256 totalAmount;
@@ -76,10 +78,18 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         _grantRole(STARTER_ROLE, token_);
     }
 
+    /**
+     * @notice Starts vesting.
+     */
     function setStartAt() external onlyRole(STARTER_ROLE) {
         startAt = uint128(block.timestamp);
     }
 
+    /**
+     * @notice Sets public round vest for user.
+     * @param _accounts The array of users.
+     * @param _amounts The array of amounts.
+     */
     function setPublicRoundVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts
@@ -100,6 +110,11 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         );
     }
 
+    /**
+     * @notice Sets seed round vest for user.
+     * @param _accounts The array of users.
+     * @param _amounts The array of amounts.
+     */
     function setSeedRoundVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts
@@ -120,6 +135,11 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         );
     }
 
+    /**
+     * @notice Sets private round one vest for user.
+     * @param _accounts The array of users.
+     * @param _amounts The array of amounts.
+     */
     function setPrivateRoundOneVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts
@@ -140,6 +160,11 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         );
     }
 
+    /**
+     * @notice Sets private round two vest for user.
+     * @param _accounts The array of users.
+     * @param _amounts The array of amounts.
+     */
     function setPrivateRoundTwoVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts
@@ -160,6 +185,13 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         );
     }
 
+    /**
+     * @notice Sets marketing vest for user.
+     * @param _account The user address.
+     * @param _amount The amount of vesting token.
+     * @param _cliff The duration in seconds when token locks.
+     * @param _duration The duration of vesting in seconds.
+     */
     function setMarketingVestFor(
         address _account,
         uint256 _amount,
@@ -184,12 +216,18 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         emit VestingCreated(_account, _amount, uint128(block.timestamp));
     }
 
+    /**
+     * @notice Sets main team vest for user.
+     * @param _accounts The array of users.
+     * @param _amounts The array of amounts.
+     * @param _percents The array of percents.
+     */
     function setMainTeamVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts,
         uint8[] calldata _percents
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint8 accountsCount = uint8(_accounts.length);
+        uint16 accountsCount = uint16(_accounts.length);
 
         require(
             accountsCount == _amounts.length &&
@@ -202,26 +240,30 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
             "Vesting: founders should be 3"
         );
 
+        uint8 direction = uint8(Direction.TEAM);
         uint8 totalPercent;
         uint256 totalAmount;
 
-        for (uint8 i = 0; i < accountsCount; i++) {
-            totalAmount += _amounts[i];
+        for (uint16 i = 0; i < accountsCount; i++) {
+            address account = _accounts[i];
+            uint256 amount = _amounts[i];
+            uint8 percent = _percents[i];
 
             _vestFor(
-                _accounts[i],
-                _amounts[i],
+                account,
+                amount,
                 startAt,
                 120 days,
                 720 days,
                 0,
-                uint8(Direction.TEAM)
+                direction
             );
 
-            totalPercent += _percents[i];
-            foundersPercent[_accounts[i]] = _percents[i];
-            founders.push(_accounts[i]);
-            mainTeamTotalAmount += _amounts[i];
+            totalAmount += amount;
+            totalPercent += percent;
+            foundersPercent[account] = percent;
+            founders.push(account);
+            mainTeamTotalAmount += amount;
         }
 
         require(totalPercent == 100, "Vesting: total percent !100");
@@ -233,12 +275,17 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         emit BatchVestingCreated(_accounts, _amounts, startAt);
     }
 
+    /**
+     * @notice Sets additional team vest for user.
+     * @param _accounts The array of users.
+     * @param _amounts The array of amounts.
+     */
     function setAdditionalTeamVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts
     ) external onlyRole(MULTISIG_ROLE) {
-        uint8 accountsCount = uint8(_accounts.length);
-        uint8 foundersCount = uint8(founders.length);
+        uint16 accountsCount = uint16(_accounts.length);
+        uint16 foundersCount = uint16(founders.length);
 
         require(
             accountsCount == _amounts.length,
@@ -250,12 +297,13 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         );
 
         uint8 direction = uint8(Direction.TEAM);
-
         uint256 totalAmount;
 
-        for (uint8 i = 0; i < accountsCount; i++) {
-            totalAmount += _amounts[i];
-            additionalTeamTotalAmount += _amounts[i];
+        for (uint16 i = 0; i < accountsCount; i++) {
+            uint256 amount = _amounts[i];
+
+            totalAmount += amount;
+            additionalTeamTotalAmount += amount;
 
             require(
                 (additionalTeamTotalAmount * 100) / mainTeamTotalAmount <= 50,
@@ -264,7 +312,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
 
             _vestFor(
                 _accounts[i],
-                _amounts[i],
+                amount,
                 startAt,
                 120 days,
                 720 days,
@@ -273,9 +321,13 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
             );
         }
 
-        for (uint8 i = 0; i < foundersCount; i++) {
-            vestingSchedules[founders[i]][direction].totalAmount -=
-                (additionalTeamTotalAmount * foundersPercent[founders[i]]) /
+        for (uint16 i = 0; i < foundersCount; i++) {
+            address founder = founders[i];
+
+            // After adding a new user to the team, the total amount of
+            // founder tokens in the team decreases according to their percentage.
+            vestingSchedules[founder][direction].totalAmount -=
+                (additionalTeamTotalAmount * foundersPercent[founder]) /
                 100;
         }
 
@@ -288,6 +340,11 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         emit BatchVestingCreated(_accounts, _amounts, startAt);
     }
 
+    /**
+     * @notice Sets foundation vest for user.
+     * @param _accounts The array of users.
+     * @param _amounts The array of amounts.
+     */
     function setFoundationVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts
@@ -308,6 +365,10 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         );
     }
 
+    /**
+     * @notice Withdraws available amount of tokens in the contract.
+     * @param _amount The amount of tokens.
+     */
     function withdraw(uint256 _amount)
         public
         nonReentrant
@@ -318,15 +379,20 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         token.safeTransfer(msg.sender, _amount);
     }
 
+    /**
+     * @notice Gives available amount of tokens.
+     */
     function claim() external {
         uint256 totalVestedAmount = 0;
 
         for (uint8 i = 0; i < DIRECTION_COUNT; i++) {
+            // Returns the available amount of tokens from one of the directions.
             uint256 vestedAmount = _vestedAmount(
                 vestingSchedules[msg.sender][i]
             );
 
             if (vestedAmount > 0) {
+                // Increases released amount in vesting.
                 vestingSchedules[msg.sender][i].released += vestedAmount;
             }
 
@@ -335,6 +401,7 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
 
         require(totalVestedAmount > 0, "Vesting: claim amount is 0");
 
+        // Current amount of tokens in vesting.
         vestingSchedulesTotalAmount -= totalVestedAmount;
 
         token.safeTransfer(msg.sender, totalVestedAmount);
@@ -342,22 +409,40 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         emit Claimed(msg.sender, totalVestedAmount);
     }
 
+    /**
+     * @notice Returns available amount of tokens.
+     * @param _account The user address.
+     */
     function getVestedAmount(address _account)
-        public
+        external
         view
         returns (uint256 totalVestedAmount)
     {
         for (uint8 i = 0; i < DIRECTION_COUNT; i++) {
+            // Returns the available amount of tokens from one of the directions.
             uint256 vestedAmount = _vestedAmount(vestingSchedules[_account][i]);
 
             totalVestedAmount += vestedAmount;
         }
     }
 
+    /**
+     * @notice Returns withdrawable amount of tokens which is available.
+     */
     function getWithdrawableAmount() public view returns (uint256) {
         return token.balanceOf(address(this)) - vestingSchedulesTotalAmount;
     }
 
+    /**
+     * @notice Creates vesting schedules for users.
+     * @param _accounts The array of users.
+     * @param _amounts The array of amounts.
+     * @param _startAt The start date of vesting.
+     * @param _cliff The duration in seconds when token locks.
+     * @param _duration The duration of vesting in seconds.
+     * @param _unlockPercent The unlock percent of tokens which available after cliff.
+     * @param _direction The direction of vesting.
+     */
     function _batchVestFor(
         address[] calldata _accounts,
         uint256[] calldata _amounts,
@@ -367,16 +452,14 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         uint8 _unlockPercent,
         uint8 _direction
     ) private returns (uint256 totalAmount) {
-        uint8 accountsCount = uint8(_accounts.length);
+        uint16 accountsCount = uint16(_accounts.length);
 
         require(
             accountsCount == _amounts.length,
             "Vesting: data lengths !match"
         );
 
-        for (uint8 i = 0; i < accountsCount; i++) {
-            totalAmount += _amounts[i];
-
+        for (uint16 i = 0; i < accountsCount; i++) {
             _vestFor(
                 _accounts[i],
                 _amounts[i],
@@ -386,11 +469,23 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
                 _unlockPercent,
                 _direction
             );
+
+            totalAmount += _amounts[i];
         }
 
         emit BatchVestingCreated(_accounts, _amounts, _startAt);
     }
 
+    /**
+     * @notice Creates vesting schedules for user.
+     * @param _account The user address.
+     * @param _amount The amount of vesting token.
+     * @param _startAt The start date of vesting.
+     * @param _cliff The duration in seconds when token locks.
+     * @param _duration The duration of vesting in seconds.
+     * @param _unlockPercent The unlock percent of tokens which available after cliff.
+     * @param _direction The direction of vesting.
+     */
     function _vestFor(
         address _account,
         uint256 _amount,
@@ -409,9 +504,11 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         require(_account != address(0), "Vesting: zero address");
         require(_startAt != 0, "Vesting: !started");
 
+        // Current amount of tokens in vesting.
         vestingSchedulesTotalAmount += _amount;
-
+        // Returns cliff date.
         uint128 cliff = _startAt + _cliff;
+        // Unlock amount can claim after cliff in any day.
         uint256 unlockAmount = (_amount * _unlockPercent) / 100;
 
         vestingSchedules[_account][_direction] = VestingSchedule(
@@ -425,6 +522,10 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
         );
     }
 
+    /**
+     * @notice Returns available amount of tokens.
+     * @param _vestingSchedule The vesting schedule structure.
+     */
     function _vestedAmount(VestingSchedule memory _vestingSchedule)
         private
         view
@@ -434,41 +535,52 @@ contract Vesting is AccessControl, ITokenVesting, ReentrancyGuard {
             return 0;
         }
 
-        uint256 blockTimestamp = (block.timestamp);
+        uint128 currentTime = uint128(block.timestamp);
 
-        if (blockTimestamp < _vestingSchedule.cliffInSeconds) {
+        // Claims after cliff.
+        if (currentTime < _vestingSchedule.cliffAt) {
             return 0;
         }
 
-        uint256 timeFromStart = blockTimestamp - _vestingSchedule.startAt;
+        // Duration in seconds from starting vesting.
+        uint128 timeFromStart = currentTime - _vestingSchedule.startAt;
 
+        // After ending vesting user can claim in any day.
         if (timeFromStart >= _vestingSchedule.durationInSeconds) {
             return _vestingSchedule.totalAmount - _vestingSchedule.released;
         }
 
         uint256 released = _vestingSchedule.released;
+        // Returns true if the user tries to claim every 30 days.
+        bool isPayOutDay = (timeFromStart / 86400) % 30 == 0;
 
-        if ((timeFromStart / 86400) % 30 != 0 && released == 0) {
+        // Once a month, the user can claim tokens, except when the user has the amount to unlock early.
+        // !payout day, but user can have early unlock amount.
+        if (!isPayOutDay && released == 0) {
             return _vestingSchedule.earlyUnlockAmount;
         }
 
-        if ((timeFromStart / 86400) % 30 != 0 && released > 0) {
+        // !payout day and user has already got early unlock amount.
+        if (!isPayOutDay && released > 0) {
             return 0;
         }
 
         uint256 vestedAmountForPeriod = 0;
 
+        // Payout day and released amount is 0.
         if (released == 0) {
             return
                 _vestingSchedule.earlyUnlockAmount +
                 (_vestingSchedule.totalAmount * timeFromStart) /
                 _vestingSchedule.durationInSeconds;
         } else {
+            // Released amount without early unlock amount.
             vestedAmountForPeriod +=
                 (_vestingSchedule.totalAmount * timeFromStart) /
                 _vestingSchedule.durationInSeconds -
                 (released - _vestingSchedule.earlyUnlockAmount);
 
+            // Released with current vested amount shouldn't be bigger total amount of vesting.
             if (
                 released + vestedAmountForPeriod <= _vestingSchedule.totalAmount
             ) {

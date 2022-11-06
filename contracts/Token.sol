@@ -17,6 +17,11 @@ contract Token is ERC20, ERC20Burnable, Ownable {
         _mint(msg.sender, totalSupply_);
     }
 
+    /**
+     * @notice Executes TGE, startes vesting.
+     * @param _vesting The vesting contract address.
+     * @param _amount The amount of transfering.
+     */
     function executeTGE(address _vesting, uint256 _amount) external onlyOwner {
         require(!isExecuted, "Token: TGE executed");
 

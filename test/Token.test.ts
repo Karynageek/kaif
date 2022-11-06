@@ -46,6 +46,13 @@ describe('Token contract', () => {
     await vesting.deployed();
   });
 
+  describe('initial values', async () => {
+    it('should set initial mints', async () => {
+      expect(await token.balanceOf(owner.address)).to.equal(totalSupply);
+      expect(await token.totalSupply()).to.equal(totalSupply);
+    });
+  });
+
   describe('executes TGE', async () => {
     it('executes TGE successfully', async () => {
       const amount = parseUnits("100", await token.decimals());

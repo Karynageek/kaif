@@ -21,11 +21,18 @@ contract MultiSigWallet is ReentrancyGuard {
 
         require(threshold >= 2, "MultiSigWallet: threshold < 2");
 
-        for (uint256 i = 0; i < threshold; i++) {
+        for (uint8 i = 0; i < threshold; i++) {
             isOwners[owners_[i]] = true;
         }
     }
 
+    /**
+     * @notice Execute a multi-signature transaction.
+     * @param _to The destination address to send an outgoing transaction.
+     * @param _amount The amount in Wei to be sent.
+     * @param _data The data to send to the to when invoking the transaction.
+     * @param _multiSignature The array of multi signatures.
+     */
     function execute(
         address _to,
         uint256 _amount,
@@ -42,6 +49,11 @@ contract MultiSigWallet is ReentrancyGuard {
         emit Executed(_to, _amount);
     }
 
+    /**
+     * @notice Adding or removing signer.
+     * @param _owner The signer address.
+     * @param _isAdded If true, a new signer will be added, otherwise, remove.
+     */
     function updateOwner(address _owner, bool _isAdded) external {
         require(
             msg.sender == address(this),
@@ -64,6 +76,14 @@ contract MultiSigWallet is ReentrancyGuard {
         emit OwnerUpdated(_owner);
     }
 
+    /**
+     * @notice Validates a multi-signature transaction.
+     * @param _to The destination address to send an outgoing transaction.
+     * @param _amount The amount in Wei to be sent.
+     * @param _data The data to send to the to when invoking the transaction.
+     * @param _nonce The unique id.
+     * @param _multiSignature The array of multi signatures.
+     */
     function _validateMultiSigWallet(
         address _to,
         uint256 _amount,
@@ -105,16 +125,27 @@ contract MultiSigWallet is ReentrancyGuard {
         }
     }
 
+    /**
+     * @notice Transfer funds.
+     * @param _to The recipient to send.
+     * @param _amount The value to send.
+     * @param _data the data to send to the to when invoking the transaction.
+     */
     function _transfer(
         address _to,
         uint256 _amount,
         bytes calldata _data
     ) private {
+        // Success, send the transaction.
         (bool success, ) = _to.call{value: _amount}(_data);
 
         require(success, "MultiSigWallet: transfer !ended");
     }
 
+    /**
+     * @notice Changes count of signers.
+     * @param _threshold The count of signers.
+     */
     function _changeRequirement(uint8 _threshold) private {
         require(_threshold >= 2, "MultiSigWallet: threshold < 2");
 
