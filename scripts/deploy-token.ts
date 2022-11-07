@@ -15,8 +15,10 @@ async function main() {
 
   [...addrs] = await ethers.getSigners();
 
+  const to = addrs[0].address;
+
   const Token = (await ethers.getContractFactory('Token')) as Token__factory;
-  token = await Token.deploy(name, symbol, totalSupply);
+  token = await Token.deploy(name, symbol, totalSupply, to);
   await token.deployed();
 
   console.log("Token deployed to:", token.address);

@@ -12,9 +12,10 @@ contract Token is ERC20, ERC20Burnable, Ownable {
     constructor(
         string memory name_,
         string memory symbol_,
-        uint256 totalSupply_
+        uint256 totalSupply_,
+        address to_
     ) ERC20(name_, symbol_) {
-        _mint(msg.sender, totalSupply_);
+        _mint(to_, totalSupply_);
     }
 
     /**

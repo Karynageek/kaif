@@ -58,7 +58,7 @@ describe('MultiSigWallet contract', () => {
     [owner, addr1, addr2, addr3, addr4, ...addrs] = await ethers.getSigners();
 
     const Token = (await ethers.getContractFactory('Token')) as Token__factory;
-    token = await Token.deploy(name, symbol, totalSupply);
+    token = await Token.deploy(name, symbol, totalSupply, owner.address);
     await token.deployed();
   });
 

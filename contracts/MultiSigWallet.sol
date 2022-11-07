@@ -90,7 +90,7 @@ contract MultiSigWallet is ReentrancyGuard {
         bytes calldata _data,
         uint256 _nonce,
         bytes[] calldata _multiSignature
-    ) private {
+    ) private view {
         uint8 count = uint8(_multiSignature.length);
 
         require(count == threshold, "MultiSigWallet: !enough signers");
